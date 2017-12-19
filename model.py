@@ -108,6 +108,6 @@ def normalized_X_corr_model():
         x_corr_mod.summary()
     except:
         pass
-    print(model1._keras_shape)
+    print(x_corr_mod.output._keras_shape)
 if __name__ == "__main__":
     normalized_X_corr_model()
