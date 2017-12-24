@@ -1,4 +1,5 @@
 import keras
+import sys
 from keras import backend as K
 from keras.layers import Conv2D, MaxPooling2D, Dense,Input
 from keras.models import Model, Sequential
@@ -6,6 +7,7 @@ from keras.engine import InputSpec, Layer
 from keras import regularizers
 from keras.utils.conv_utils import conv_output_length
 from keras import activations
+import numpy as np
 
 class Normalized_Correlation_Layer(Layer):
     def __init__(self, patch_size=(12,5),
@@ -24,7 +26,7 @@ class Normalized_Correlation_Layer(Layer):
         self.activation = activations.get(activation)
         super(Normalized_Correlation_Layer, self).__init__(**kwargs)
 
-    def get_output_shape_for(self, input_shape):
+    def compute_output_shape(self, input_shape):
         if self.dim_ordering == 'tf':
             inp_rows = input_shape[0][1]
             inp_cols = input_shape[0][2]
@@ -34,31 +36,35 @@ class Normalized_Correlation_Layer(Layer):
                                    self.border_mode, 1)
         cols = conv_output_length(inp_cols, self.kernel_size[1],
                                    self.border_mode, 1)
-        out_r = conv_output_length(inp_rows, self.kernel_size[0],
-                                   self.border_mode, self.subsample[0])
-        out_c = conv_output_length(inp_cols, self.kernel_size[1],
-                                   self.border_mode, self.subsample[1])
-        return (input_shape[0][0], rows, cols, out_r * out_c)
+        return (input_shape[0][0], rows, cols,self.kernel_size[0]*self.kernel_size[1]*input_shape[0][-1])
 
     def call(self, x, mask=None):
         input_1, input_2 = x
         stride_row, stride_col = self.subsample
+        
+        #np.pad(input_1, ((2,2),(5,6)), 'constant')
+        #np.pad(input_2, ((2,2),(5,6)), 'constant')
         inp_shape = input_1._keras_shape
-        output_shape = self.get_output_shape_for([inp_shape, inp_shape])
+        c = list(inp_shape)
+        c[1] += 11
+        c[2] += 4
+        inp_shape = tuple(c)
+        
+        output_shape = self.compute_output_shape([inp_shape, inp_shape])
         output_row = inp_shape[1] - self.kernel_size[0] + 1
         output_col = inp_shape[2] - self.kernel_size[1] + 1
         xc_1 = []
         xc_2 = []
-        for i in range(output_row):
-            for j in range(output_col):
+        for k in range(inp_shape[-1]):
+            for i in range(output_row):
                 slice_row = slice(i, i + self.kernel_size[0])
-                slice_col = slice(j, j + self.kernel_size[1])
-                xc_2.append(K.reshape(input_2[:, slice_row, slice_col, :],
-                                      (-1, 1, self.kernel_size[0]*self.kernel_size[1]*inp_shape[-1])))
-                if i % stride_row == 0 and j % stride_col == 0:
-                    xc_1.append(K.reshape(input_1[:, slice_row, slice_col, :],
-                                          (-1, 1, self.kernel_size[0]*self.kernel_size[1]*inp_shape[-1])))
-
+                for j in range(output_col):
+                    slice_col = slice(j, j + self.kernel_size[1])
+                    xc_2.append(K.reshape(input_2[:, slice_row, slice_col, k],
+                                          (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
+                    if i % stride_row == 0 and j % stride_col == 0:
+                        xc_1.append(K.reshape(input_1[:, slice_row, slice_col, k],
+                                              (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
         xc_1_aggregate = K.concatenate(xc_1, axis=1) # batch_size x w'h' x (k**2*d), w': w/subsample-1
         xc_1_mean = K.mean(xc_1_aggregate, axis=-1, keepdims=True)
         xc_1_std = K.std(xc_1_aggregate, axis=-1, keepdims=True)
@@ -99,6 +105,7 @@ def normalized_X_corr_model():
         corr_o.summary()
     except:
         pass
-    print(corr_o.output._keras_shape)
+    #print(corr_o.output._keras_shape)
+    print(corr_o.output.shape)
 if __name__ == "__main__":
     normalized_X_corr_model()
