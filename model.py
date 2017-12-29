@@ -37,6 +37,13 @@ class Normalized_Correlation_Layer(Layer):
 
 
     def compute_output_shape(self, input_shape):
+        if self.dim_ordering == 'tf':
+            inp_rows = input_shape[0][1]
+            inp_cols = input_shape[0][2]
+        else:
+            raise ValueError('Only support tensorflow.')
+
+        
         rows = conv_output_length(inp_rows, self.kernel_size[0],
                                    self.border_mode, 1)
         cols = conv_output_length(inp_cols, self.kernel_size[1],
@@ -105,7 +112,7 @@ def normalized_X_corr_model():
     model.add(MaxPooling2D((2,2)))
     model1 = model(b)
     model2 = model(a)
-    normalized_layer = Normalized_Correlation_Layer(stride = (1,1), patch_size = 5)([model1, model2])
+    normalized_layer = Normalized_Correlation_Layer(stride = (1,1), patch_size = (5, 5))([model1, model2])
     x_corr_mod = Model(inputs=[a,b], outputs = normalized_layer)
     try:
         x_corr_mod.summary()
