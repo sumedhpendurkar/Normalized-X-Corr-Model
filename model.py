@@ -125,5 +125,23 @@ def normalized_X_corr_model():
     except:
         pass
     print(x_corr_mod.output._keras_shape)
+    return x_corr_mod
+
 if __name__ == "__main__":
-    normalized_X_corr_model()
+    test_mod = normalized_X_corr_model()
+    if True:
+        import cv2
+        im1  = cv2.imread(sys.argv[1])
+        X1 = cv2.resize(im1, (60,160))
+        im2  = cv2.imread(sys.argv[2])
+        X2 = cv2.resize(im2, (60,160))
+        X1 = np.asarray(X1)
+        X2 = np.asarray(X2)
+        X1 = X1.astype('float32')
+        X2 = X2.astype('float32')
+        X1 = np.expand_dims(X1, axis= 0)
+        X2 = np.expand_dims(X2, axis= 0)
+        Y1 = test_mod.predict([X1, X2])
+        print(Y1.shape)
+    else:
+        pass
