@@ -21,13 +21,14 @@ class Normalized_Correlation_Layer(Layer):
     '''
     def __init__(self, patch_size=(5,5),
                  dim_ordering='tf',
-                 border_mode='valid',
+                 border_mode='same',
                  stride=(1, 1),
                  activation=None,
                  **kwargs):
-        if border_mode != 'valid':
+
+        if border_mode != 'same':
             raise ValueError('Invalid border mode for Correlation Layer '
-                             '(only "valid" is supported):', border_mode)
+                             '(only "same" is supported as of now):', border_mode)
         self.kernel_size = patch_size
         self.subsample = stride
         self.dim_ordering = dim_ordering
@@ -42,13 +43,18 @@ class Normalized_Correlation_Layer(Layer):
             inp_cols = input_shape[0][2]
         else:
             raise ValueError('Only support tensorflow.')
-
         
-        rows = conv_output_length(inp_rows, self.kernel_size[0],
-                                   self.border_mode, 1)
-        cols = conv_output_length(inp_cols, self.kernel_size[1],
-                                   self.border_mode, 1)
-        return (input_shape[0][0], rows, cols,self.kernel_size[0]*self.kernel_size[1]*input_shape[0][-1])
+        if self.border_mode != "same":
+            rows = conv_output_length(inp_rows, self.kernel_size[0],
+                                       self.border_mode, 1)
+            cols = conv_output_length(inp_cols, self.kernel_size[1],
+                                       self.border_mode, 1)
+        else:
+            rows = inp_rows
+            cols = inp_cols
+        
+        return (input_shape[0][0], rows, cols,self.kernel_size[0]*cols*input_shape[0][-1])
+    
 
     def call(self, x, mask=None):
         input_1, input_2 = x
