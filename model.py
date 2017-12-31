@@ -60,14 +60,6 @@ class Normalized_Correlation_Layer(Layer):
         input_1, input_2 = x
         stride_row, stride_col = self.subsample
         
-        #np.pad(input_1, ((2,2),(5,6)), 'constant')
-        #np.pad(input_2, ((2,2),(5,6)), 'constant')
-        inp_shape = input_1._keras_shape
-        c = list(inp_shape)
-        c[1] += 11
-        c[2] += 4
-        inp_shape = tuple(c)
-        
         output_shape = self.compute_output_shape([inp_shape, inp_shape])
         output_row = inp_shape[1] - self.kernel_size[0] + 1
         output_col = inp_shape[2] - self.kernel_size[1] + 1
