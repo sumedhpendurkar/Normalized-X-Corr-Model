@@ -59,7 +59,7 @@ class Normalized_Correlation_Layer(Layer):
     def call(self, x, mask=None):
         input_1, input_2 = x
         stride_row, stride_col = self.subsample
-        
+        inp_shape = input_1._keras_shape 
         output_shape = self.compute_output_shape([inp_shape, inp_shape])
         output_row = inp_shape[1] - self.kernel_size[0] + 1
         output_col = inp_shape[2] - self.kernel_size[1] + 1
