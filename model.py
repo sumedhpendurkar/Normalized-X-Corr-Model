@@ -59,10 +59,23 @@ class Normalized_Correlation_Layer(Layer):
     def call(self, x, mask=None):
         input_1, input_2 = x
         stride_row, stride_col = self.subsample
-        inp_shape = input_1._keras_shape 
+        inp_shape = input_1._keras_shape
         output_shape = self.compute_output_shape([inp_shape, inp_shape])
+        
+        #hard coded for 5 patch size
+        #print(input_1.shape)
+        input_1 = K.spatial_2d_padding(input_1, padding = ((2,2),(2,2)))
+        input_2 = K.spatial_2d_padding(input_2, padding = ((2,2),(2,2)))
+        
+        #print(input_1.shape)
+        output_row = output_shape[1]
+        output_col = output_shape[2]
+
+        """
+        orginal shit
         output_row = inp_shape[1] - self.kernel_size[0] + 1
         output_col = inp_shape[2] - self.kernel_size[1] + 1
+        """
         xc_1 = []
         xc_2 = []
         for k in range(inp_shape[-1]):
