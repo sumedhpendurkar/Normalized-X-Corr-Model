@@ -65,7 +65,7 @@ class Normalized_Correlation_Layer(Layer):
         #hard coded for 5 patch size
         #print(input_1.shape)
         input_1 = K.spatial_2d_padding(input_1, padding = ((2,2),(2,2)))
-        input_2 = K.spatial_2d_padding(input_2, padding = ((2,2),(2,2)))
+        input_2 = K.spatial_2d_padding(input_2, padding = ((4,4),(2,2)))
         
         #print(input_1.shape)
         output_row = output_shape[1]
@@ -79,15 +79,25 @@ class Normalized_Correlation_Layer(Layer):
         xc_1 = []
         xc_2 = []
         for k in range(inp_shape[-1]):
+            for i in range(2):
+                for j in range(output_col):
+                    xc_2.append(K.reshape(input_2[:, i:i+5, j:j+5, k],
+                                          (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
             for i in range(output_row):
                 slice_row = slice(i, i + self.kernel_size[0])
+                slice_row2 = slice(i+2, i + self.kernel_size[0]+2)
                 for j in range(output_col):
                     slice_col = slice(j, j + self.kernel_size[1])
-                    xc_2.append(K.reshape(input_2[:, slice_row, slice_col, k],
+                    xc_2.append(K.reshape(input_2[:, slice_row2, slice_col, k],
                                           (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
                     if i % stride_row == 0 and j % stride_col == 0:
                         xc_1.append(K.reshape(input_1[:, slice_row, slice_col, k],
                                               (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
+            for i in range(output_row, output_row+2):
+                for j in range(output_col):
+                    xc_2.append(K.reshape(input_2[:, i:i+5, j:j+5, k],
+                                          (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
+            print(len(xc_1), len(xc_2))
 
         xc_1_aggregate = K.concatenate(xc_1, axis=1) # batch_size x w'h' x (k**2*d), w': w/subsample-1
         xc_1_mean = K.mean(xc_1_aggregate, axis=-1, keepdims=True)
@@ -99,9 +109,20 @@ class Normalized_Correlation_Layer(Layer):
         xc_2_std = K.std(xc_2_aggregate, axis=-1, keepdims=True)
         xc_2_aggregate = (xc_2_aggregate - xc_2_mean) / xc_2_std
         xc_1_aggregate = K.permute_dimensions(xc_1_aggregate, (0, 2, 1))
-        output = K.batch_dot(xc_2_aggregate, xc_1_aggregate)    # batch_size x wh x w'h'
+        output = []
+        l_xc_1= len(xc_1)
+        l_xc_2= len(xc_2)
+        for i in range(l_xc_1):
+            sl1 = slice(int(i/12)*12, int(i/12)*12+60)
+            sl2 = slice(i,i+1)
+            output.append(K.batch_dot(xc_2_aggregate[:,sl1,:],
+                                  xc_1_aggregate[:,:,sl2]))
+        output = K.concatenate(output, axis=1)
+        print(output.shape)
+        #output = K.batch_dot(xc_2_aggregate, xc_1_aggregate)    # batch_size x wh x w'h'
         output = K.reshape(output, (-1, output_row, output_col, output_shape[-1]))
         output = self.activation(output)
+        print(output.shape)
         return output
 
     def get_config(self):
@@ -134,7 +155,7 @@ def normalized_X_corr_model():
 
 if __name__ == "__main__":
     test_mod = normalized_X_corr_model()
-    if True:
+    try:
         import cv2
         im1  = cv2.imread(sys.argv[1])
         X1 = cv2.resize(im1, (60,160))
@@ -148,5 +169,5 @@ if __name__ == "__main__":
         X2 = np.expand_dims(X2, axis= 0)
         Y1 = test_mod.predict([X1, X2])
         print(Y1.shape)
-    else:
+    except:
         pass
