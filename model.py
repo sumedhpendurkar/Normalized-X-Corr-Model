@@ -153,7 +153,17 @@ def normalized_X_corr_model():
     print(x_corr_mod.output._keras_shape)
     return x_corr_mod
 
+def norm_model(input_size = (8,8,2)):
+    a = Input(input_size) 
+    b = Input(input_size)
+    output = Normalized_Correlation_Layer(stride = (1,1), patch_size = (5,5))([a,b])
+    return Model(inputs=[a,b], outputs= output)
+
 if __name__ == "__main__":
+    import sys
+    m = norm_model()
+    m.summary()
+    sys.exit(0)
     test_mod = normalized_X_corr_model()
     try:
         import cv2
