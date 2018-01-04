@@ -161,13 +161,13 @@ def norm_model(input_size = (8,8,2)):
 
 if __name__ == "__main__":
     import sys
-    m = norm_model()
-    m.summary()
-    sys.exit(0)
-    test_mod = normalized_X_corr_model()
+    test_mod = norm_model()
+    #test_mod = normalized_X_corr_model()
     try:
         import cv2
         im1  = cv2.imread(sys.argv[1])
+        
+        #resize as per your needs or create your numpy arrays. image is of 60,160,3 in this case
         X1 = cv2.resize(im1, (60,160))
         im2  = cv2.imread(sys.argv[2])
         X2 = cv2.resize(im2, (60,160))
@@ -175,9 +175,15 @@ if __name__ == "__main__":
         X2 = np.asarray(X2)
         X1 = X1.astype('float32')
         X2 = X2.astype('float32')
+        
+        #this is necessary, dont skip it
         X1 = np.expand_dims(X1, axis= 0)
         X2 = np.expand_dims(X2, axis= 0)
+        
+        #right now code shits here, first fix it then check the output
         Y1 = test_mod.predict([X1, X2])
         print(Y1.shape)
+        #add statement like this
+        #np.save(Y1) # check syntax
     except:
         pass
