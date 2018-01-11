@@ -76,9 +76,10 @@ class Normalized_Correlation_Layer(Layer):
         output_row = inp_shape[1] - self.kernel_size[0] + 1
         output_col = inp_shape[2] - self.kernel_size[1] + 1
         """
-        xc_1 = []
-        xc_2 = []
+        output = []
         for k in range(inp_shape[-1]):
+            xc_1 = []
+            xc_2 = []
             for i in range(2):
                 for j in range(output_col):
                     xc_2.append(K.reshape(input_2[:, i:i+5, j:j+5, k],
@@ -97,30 +98,29 @@ class Normalized_Correlation_Layer(Layer):
                 for j in range(output_col):
                     xc_2.append(K.reshape(input_2[:, i:i+5, j:j+5, k],
                                           (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
-            print(len(xc_1), len(xc_2))
 
-        xc_1_aggregate = K.concatenate(xc_1, axis=1) # batch_size x w'h' x (k**2*d), w': w/subsample-1
-        xc_1_mean = K.mean(xc_1_aggregate, axis=-1, keepdims=True)
-        xc_1_std = K.std(xc_1_aggregate, axis=-1, keepdims=True)
-        xc_1_aggregate = (xc_1_aggregate - xc_1_mean) / xc_1_std
-
-        xc_2_aggregate = K.concatenate(xc_2, axis=1) # batch_size x wh x (k**2*d), w: output_row
-        xc_2_mean = K.mean(xc_2_aggregate, axis=-1, keepdims=True)
-        xc_2_std = K.std(xc_2_aggregate, axis=-1, keepdims=True)
-        xc_2_aggregate = (xc_2_aggregate - xc_2_mean) / xc_2_std
-        xc_1_aggregate = K.permute_dimensions(xc_1_aggregate, (0, 2, 1))
-        output = []
-        l_xc_1= len(xc_1)
-        l_xc_2= len(xc_2)
-        for i in range(l_xc_1):
-            sl1 = slice(int(i/12)*12, int(i/12)*12+60)
-            sl2 = slice(i,i+1)
-            output.append(K.batch_dot(xc_2_aggregate[:,sl1,:],
-                                  xc_1_aggregate[:,:,sl2]))
-        output = K.concatenate(output, axis=1)
-        print(output.shape)
-        #output = K.batch_dot(xc_2_aggregate, xc_1_aggregate)    # batch_size x wh x w'h'
-        output = K.reshape(output, (-1, output_row, output_col, output_shape[-1]))
+            xc_1_aggregate = K.concatenate(xc_1, axis=1) # batch_size x w'h' x (k**2*d), w': w/subsample-1
+            xc_1_mean = K.mean(xc_1_aggregate, axis=-1, keepdims=True)
+            xc_1_std = K.std(xc_1_aggregate, axis=-1, keepdims=True)
+            xc_1_aggregate = (xc_1_aggregate - xc_1_mean) / xc_1_std
+    
+            xc_2_aggregate = K.concatenate(xc_2, axis=1) # batch_size x wh x (k**2*d), w: output_row
+            xc_2_mean = K.mean(xc_2_aggregate, axis=-1, keepdims=True)
+            xc_2_std = K.std(xc_2_aggregate, axis=-1, keepdims=True)
+            xc_2_aggregate = (xc_2_aggregate - xc_2_mean) / xc_2_std
+            xc_1_aggregate = K.permute_dimensions(xc_1_aggregate, (0, 2, 1))
+            block = []
+            l_xc_1= len(xc_1)
+            l_xc_2= len(xc_2)
+            for i in range(l_xc_1):
+                sl1 = slice(int(i/12)*12, int(i/12)*12+60)
+                sl2 = slice(i,i+1)
+                block.append(K.reshape(K.batch_dot(xc_2_aggregate[:,sl1,:],
+                                      xc_1_aggregate[:,:,sl2]), (-1,1,1,60)))
+            block = K.concatenate(block, axis=1)
+            block = K.reshape(block, (-1,37,12,60))
+            output.append(block)
+        output = K.concatenate(output, axis=-1)
         output = self.activation(output)
         print(output.shape)
         return output
