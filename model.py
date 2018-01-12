@@ -115,9 +115,9 @@ class Normalized_Correlation_Layer(Layer):
             for i in range(l_xc_1):
                 sl1 = slice(int(i/inp_shape[1])*inp_shape[1],
                         int(i/inp_shape[1])*inp_shape[1]+inp_shape[1]*self.kernel_size[0])
-                sl2 = i
                 block.append(K.reshape(K.batch_dot(xc_2_aggregate[:,sl1,:],
-                                      xc_1_aggregate[:,:,sl2]),(-1,1,1,inp_shape[1]*self.kernel_size[0])))
+                                      xc_1_aggregate[:,:,i]),(-1,1,1,inp_shape[1]*self.kernel_size[0])))
+
             block = K.concatenate(block, axis=1)
             block = K.reshape(block,(-1,output_row,output_col,inp_shape[1]*self.kernel_size[0]))
             output.append(block)
