@@ -65,17 +65,12 @@ class Normalized_Correlation_Layer(Layer):
         padding_row = (int(self.kernel_size[0] / 2),int(self.kernel_size[0]))
         padding_col = (int(self.kernel_size[1] / 2),int(self.kernel_size[1]))
         input_1 = K.spatial_2d_padding(input_1, padding =(padding_row,padding_col))
-        input_2 = K.spatial_2d_padding(input_2, padding = (padding_row*2,padding_col))
+        input_2 = K.spatial_2d_padding(input_2, padding = ((padding_row[0]*2, padding_row[1]*2),padding_col))
         
         #print(input_1.shape)
         output_row = output_shape[1]
         output_col = output_shape[2]
 
-        """
-        orginal shit
-        output_row = inp_shape[1] - self.kernel_size[0] + 1
-        output_col = inp_shape[2] - self.kernel_size[1] + 1
-        """
         output = []
         for k in range(inp_shape[-1]):
             xc_1 = []
@@ -110,9 +105,8 @@ class Normalized_Correlation_Layer(Layer):
             xc_2_aggregate = (xc_2_aggregate - xc_2_mean) / xc_2_std
             xc_1_aggregate = K.permute_dimensions(xc_1_aggregate, (0, 2, 1))
             block = []
-            l_xc_1= len(xc_1)
-            l_xc_2= len(xc_2)
-            for i in range(l_xc_1):
+            len_xc_1= len(xc_1)
+            for i in range(len_xc_1):
                 sl1 = slice(int(i/inp_shape[1])*inp_shape[1],
                         int(i/inp_shape[1])*inp_shape[1]+inp_shape[1]*self.kernel_size[0])
                 block.append(K.reshape(K.batch_dot(xc_2_aggregate[:,sl1,:],
