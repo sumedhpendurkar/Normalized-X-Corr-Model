@@ -62,10 +62,10 @@ class Normalized_Correlation_Layer(Layer):
         inp_shape = input_1._keras_shape
         output_shape = self.compute_output_shape([inp_shape, inp_shape])
         
-        #hard coded for 5 patch size
-        #print(input_1.shape)
-        input_1 = K.spatial_2d_padding(input_1, padding = ((2,2),(2,2)))
-        input_2 = K.spatial_2d_padding(input_2, padding = ((4,4),(2,2)))
+        padding_row = (int(self.kernel_size[0] / 2),int(self.kernel_size[0]))
+        padding_col = (int(self.kernel_size[1] / 2),int(self.kernel_size[1]))
+        input_1 = K.spatial_2d_padding(input_1, padding =(padding_row,padding_col))
+        input_2 = K.spatial_2d_padding(input_2, padding = (padding_row*2,padding_col))
         
         #print(input_1.shape)
         output_row = output_shape[1]
@@ -80,13 +80,13 @@ class Normalized_Correlation_Layer(Layer):
         for k in range(inp_shape[-1]):
             xc_1 = []
             xc_2 = []
-            for i in range(2):
+            for i in range(padding_row[0]):
                 for j in range(output_col):
-                    xc_2.append(K.reshape(input_2[:, i:i+5, j:j+5, k],
+                    xc_2.append(K.reshape(input_2[:, i:i+self.kernel_size[0], j:j+self.kernel_size[1], k],
                                           (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
             for i in range(output_row):
                 slice_row = slice(i, i + self.kernel_size[0])
-                slice_row2 = slice(i+2, i + self.kernel_size[0]+2)
+                slice_row2 = slice(i+padding_row[0], i +self.kernel_size[0]+padding_row[0])
                 for j in range(output_col):
                     slice_col = slice(j, j + self.kernel_size[1])
                     xc_2.append(K.reshape(input_2[:, slice_row2, slice_col, k],
@@ -94,9 +94,9 @@ class Normalized_Correlation_Layer(Layer):
                     if i % stride_row == 0 and j % stride_col == 0:
                         xc_1.append(K.reshape(input_1[:, slice_row, slice_col, k],
                                               (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
-            for i in range(output_row, output_row+2):
+            for i in range(output_row, output_row+padding_row[0]):
                 for j in range(output_col):
-                    xc_2.append(K.reshape(input_2[:, i:i+5, j:j+5, k],
+                    xc_2.append(K.reshape(input_2[:, i:i+ self.kernel_size[0], j:j+self.kernel_size[1], k],
                                           (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
 
             xc_1_aggregate = K.concatenate(xc_1, axis=1) # batch_size x w'h' x (k**2*d), w': w/subsample-1
@@ -113,11 +113,13 @@ class Normalized_Correlation_Layer(Layer):
             l_xc_1= len(xc_1)
             l_xc_2= len(xc_2)
             for i in range(l_xc_1):
-                sl1 = slice(int(i/12)*12, int(i/12)*12+60)
+                sl1 = slice(int(i/inp_shape[1])*inp_shape[1],
+                        int(i/inp_shape[1])*inp_shape[1]+inp_shape[1]*self.kernel_size[0])
                 block.append(K.reshape(K.batch_dot(xc_2_aggregate[:,sl1,:],
-                                      xc_1_aggregate[:,:,i]), (-1,1,1,60)))
+                                      xc_1_aggregate[:,:,i]),(-1,1,1,inp_shape[1]*self.kernel_size[0])))
+
             block = K.concatenate(block, axis=1)
-            block = K.reshape(block, (-1,37,12,60))
+            block = K.reshape(block,(-1,output_row,output_col,inp_shape[1]*self.kernel_size[0]))
             output.append(block)
         output = K.concatenate(output, axis=-1)
         output = self.activation(output)
