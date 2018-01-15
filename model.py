@@ -5,6 +5,7 @@ from keras.layers import Conv2D, MaxPooling2D, Dense,Input
 from keras.models import Model, Sequential
 from keras.engine import InputSpec, Layer
 from keras import regularizers
+from keras.optimizers import SGD, Adam
 from keras.utils.conv_utils import conv_output_length
 from keras import activations
 import numpy as np
@@ -133,14 +134,19 @@ def normalized_X_corr_model():
     a = Input((160,60,3))
     b = Input((160,60,3))
     model = Sequential()
-    model.add(Conv2D(kernel_size = (5,5), filters = 20,input_shape = (160,60,3)))
+    model.add(Conv2D(kernel_size = (5,5), filters = 20,input_shape = (160,60,3), activation = 'relu'))
     model.add(MaxPooling2D((2,2)))
-    model.add(Conv2D(kernel_size = (5,5), filters =  25))
+    model.add(Conv2D(kernel_size = (5,5), filters =  25, activation = 'relu'))
     model.add(MaxPooling2D((2,2)))
     model1 = model(b)
     model2 = model(a)
     normalized_layer = Normalized_Correlation_Layer(stride = (1,1), patch_size = (5, 5))([model1, model2])
-    x_corr_mod = Model(inputs=[a,b], outputs = normalized_layer)
+    final_layer = Conv2D(kernel_size=(1,1), filters=25, activation='relu')(normalized_layer)
+    final_layer = Con2D(kernel_size=(3,3), filters=25, activation = None)(final_layer)
+    final_layer = MaxPooling2D((2,2))(final_layer)
+    final_layer = Dense(500)(final_layer)
+    final_layer = Dense(2, activation = "softmax")(final_layer)
+    x_corr_mod = Model(inputs=[a,b], outputs = final_layer)
     try:
         x_corr_mod.summary()
     except:
@@ -152,12 +158,12 @@ def norm_model(input_size = (8,8,2)):
     a = Input(input_size) 
     b = Input(input_size)
     output = Normalized_Correlation_Layer(stride = (1,1), patch_size = (5,5))([a,b])
-    return Model(inputs=[a,b], outputs= output)
-
+    m = Model(inputs=[a,b], outputs= output)
+    return m
 if __name__ == "__main__":
     import sys
-    test_mod = norm_model()
-    #test_mod = normalized_X_corr_model()
+    #test_mod = norm_model((5,5,2))
+    test_mod = normalized_X_corr_model()
     try:
         import cv2
         im1  = cv2.imread(sys.argv[1])
@@ -181,4 +187,10 @@ if __name__ == "__main__":
         #add statement like this
         #np.save(Y1) # check syntax
     except:
-        pass
+        a = np.load("x_1.npy") /255.0
+        b = np.load("x_2.npy") /255.0
+        l = np.ones((1942, 2))
+        l[:,1] = np.ones((1942))
+        test_mod.compile(loss = 'categorical_crossentropy',  optimizer = Adam(lr = 0.0001, decay = 1e-6))
+        output = test_mod.fit([a,b], l, batch_size=64, shuffle = True, verbose = 2, epochs = 10)
+        np.save("output", output)
