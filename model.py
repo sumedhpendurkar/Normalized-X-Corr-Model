@@ -63,8 +63,8 @@ class Normalized_Correlation_Layer(Layer):
         inp_shape = input_1._keras_shape
         output_shape = self.compute_output_shape([inp_shape, inp_shape])
         
-        padding_row = (int(self.kernel_size[0] / 2),int(self.kernel_size[0]))
-        padding_col = (int(self.kernel_size[1] / 2),int(self.kernel_size[1]))
+        padding_row = (int(self.kernel_size[0] / 2),int(self.kernel_size[0] / 2))
+        padding_col = (int(self.kernel_size[1] / 2),int(self.kernel_size[1] / 2))
         input_1 = K.spatial_2d_padding(input_1, padding =(padding_row,padding_col))
         input_2 = K.spatial_2d_padding(input_2, padding = ((padding_row[0]*2, padding_row[1]*2),padding_col))
         
@@ -90,7 +90,7 @@ class Normalized_Correlation_Layer(Layer):
                     if i % stride_row == 0 and j % stride_col == 0:
                         xc_1.append(K.reshape(input_1[:, slice_row, slice_col, k],
                                               (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
-            for i in range(output_row, output_row+padding_row[0]):
+            for i in range(output_row, output_row+padding_row[1]):
                 for j in range(output_col):
                     xc_2.append(K.reshape(input_2[:, i:i+ self.kernel_size[0], j:j+self.kernel_size[1], k],
                                           (-1, 1,self.kernel_size[0]*self.kernel_size[1])))
@@ -114,7 +114,7 @@ class Normalized_Correlation_Layer(Layer):
                                       xc_1_aggregate[:,:,i]),(-1,1,1,inp_shape[1]*self.kernel_size[0])))
 
             block = K.concatenate(block, axis=1)
-            block = K.reshape(block,(-1,output_row,output_col,inp_shape[1]*self.kernel_size[0]))
+            block = K.reshape(block,(-1,output_row,output_col,inp_shape[2]*self.kernel_size[0]))
             output.append(block)
         output = K.concatenate(output, axis=-1)
         output = self.activation(output)
