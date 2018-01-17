@@ -111,7 +111,7 @@ class Normalized_Correlation_Layer(Layer):
                 sl1 = slice(int(i/inp_shape[2])*inp_shape[2],
                         int(i/inp_shape[2])*inp_shape[2]+inp_shape[2]*self.kernel_size[0])
                 block.append(K.reshape(K.batch_dot(xc_2_aggregate[:,sl1,:],
-                                      xc_1_aggregate[:,:,i]),(-1,1,1,inp_shape[1]*self.kernel_size[0])))
+                                      xc_1_aggregate[:,:,i]),(-1,1,1,inp_shape[2]*self.kernel_size[0])))
 
             block = K.concatenate(block, axis=1)
             block = K.reshape(block,(-1,output_row,output_col,inp_shape[2]*self.kernel_size[0]))
@@ -193,5 +193,5 @@ if __name__ == "__main__":
         l = np.ones((1942, 2))
         l[:,1] = np.ones((1942))
         test_mod.compile(loss = 'categorical_crossentropy',  optimizer = Adam(lr = 0.0001, decay = 1e-6))
-        output = test_mod.fit([a,b], l, batch_size=4, shuffle = True, verbose = 2, epochs = 10)
+        output = test_mod.fit([a,b], l, batch_size=1, shuffle = True, verbose = 2, epochs = 10)
         np.save("output", output)
