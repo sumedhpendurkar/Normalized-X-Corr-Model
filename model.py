@@ -1,7 +1,7 @@
 import keras
 import sys
 from keras import backend as K
-from keras.layers import Conv2D, MaxPooling2D, Dense,Input
+from keras.layers import Conv2D, MaxPooling2D, Dense,Input, Flatten
 from keras.models import Model, Sequential
 from keras.engine import InputSpec, Layer
 from keras import regularizers
@@ -108,8 +108,8 @@ class Normalized_Correlation_Layer(Layer):
             block = []
             len_xc_1= len(xc_1)
             for i in range(len_xc_1):
-                sl1 = slice(int(i/inp_shape[1])*inp_shape[1],
-                        int(i/inp_shape[1])*inp_shape[1]+inp_shape[1]*self.kernel_size[0])
+                sl1 = slice(int(i/inp_shape[2])*inp_shape[2],
+                        int(i/inp_shape[2])*inp_shape[2]+inp_shape[2]*self.kernel_size[0])
                 block.append(K.reshape(K.batch_dot(xc_2_aggregate[:,sl1,:],
                                       xc_1_aggregate[:,:,i]),(-1,1,1,inp_shape[1]*self.kernel_size[0])))
 
@@ -144,6 +144,7 @@ def normalized_X_corr_model():
     final_layer = Conv2D(kernel_size=(1,1), filters=25, activation='relu')(normalized_layer)
     final_layer = Conv2D(kernel_size=(3,3), filters=25, activation = None)(final_layer)
     final_layer = MaxPooling2D((2,2))(final_layer)
+    final_layer = Flatten()(final_layer)
     final_layer = Dense(500)(final_layer)
     final_layer = Dense(2, activation = "softmax")(final_layer)
     x_corr_mod = Model(inputs=[a,b], outputs = final_layer)
@@ -192,5 +193,5 @@ if __name__ == "__main__":
         l = np.ones((1942, 2))
         l[:,1] = np.ones((1942))
         test_mod.compile(loss = 'categorical_crossentropy',  optimizer = Adam(lr = 0.0001, decay = 1e-6))
-        output = test_mod.fit([a,b], l, batch_size=64, shuffle = True, verbose = 2, epochs = 10)
+        output = test_mod.fit([a,b], l, batch_size=4, shuffle = True, verbose = 2, epochs = 10)
         np.save("output", output)
